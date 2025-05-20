@@ -1,27 +1,63 @@
 class Enemy {
-  constructor(x, y, playerReference, sprite, projectileSprite) {
+  constructor(x, y, enemyType, playerReference, spriteSheet, projectileSprite) {
     this.x = x;
     this.y = y;
-    this.playerReference = playerReference; // Referência ao objeto do jogador
-    this.sprite = sprite; // p5.Image para o inimigo
-    this.projectileSprite = projectileSprite; // p5.Image para o projétil inimigo
+    this.type = enemyType;
+    this.playerReference = playerReference;
+    this.projectileSprite = projectileSprite;
 
-    // Especificações do Inimigo Tipo 1: Drone IA Normal
-    this.type = 1;
-    this.width = 50; // Tamanho placeholder
-    this.height = 50; // Tamanho placeholder
-    this.hp = 30;
-    this.maxHp = 30;
-    this.speed = 1.5;
-    this.damageOnCollision = 5; // Dano baixo em colisão direta
-    this.shotCooldownTime = 120; // Cooldown em frames (ex: 120 frames = 2s a 60FPS)
-    this.currentShotCooldown = this.shotCooldownTime; // Começa com cooldown para não atirar imediatamente
-    this.projectileSpeed = 4;
-    this.scoreValue = 100;
+    // Configurações baseadas no tipo de inimigo
+    switch (this.type) {
+      case 1: // Drone IA Normal
+        this.sprite = spriteSheet.normal; // Supondo que spriteSheet.normal é enemy1Img
+        this.width = 50;
+        this.height = 50;
+        this.hp = 30;
+        this.maxHp = 30;
+        this.speed = 1.5;
+        this.shotCooldownTime = 120; // 2s a 60FPS
+        this.projectileSpeed = 4;
+        this.projectileDamage = 10;
+        this.scoreValue = 100;
+        break;
+      case 2: // Scout IA Rápido
+        this.sprite = spriteSheet.fast; // Supondo que spriteSheet.fast é enemy2Img
+        this.width = 45; // Um pouco menor/mais ágil
+        this.height = 45;
+        this.hp = 20; // HP Baixo
+        this.maxHp = 20;
+        this.speed = 2.5; // Speed Alto
+        this.shotCooldownTime = 90; // 1.5s a 60FPS (um pouco menor)
+        this.projectileSpeed = 5; // Projéteis mais rápidos
+        this.projectileDamage = 7; // Dano menor
+        this.scoreValue = 150;
+        break;
+      case 3: // Cavaleiro IA do Apocalipse
+        this.sprite = spriteSheet.strong; // Supondo que spriteSheet.strong é enemy3Img
+        this.width = 70; // Maior
+        this.height = 70;
+        this.hp = 50; // HP Moderado-Alto
+        this.maxHp = 50;
+        this.speed = 1.2; // Speed Moderada
+        this.shotCooldownTime = 180; // 3s (mais lento, mas mais forte)
+        this.projectileSpeed = 3; // Projétil pode ser mais lento, mas poderoso
+        this.projectileDamage = 25; // Dano Alto
+        this.scoreValue = 350;
+        break;
+      default:
+        console.error("Tipo de inimigo desconhecido:", this.type);
+        // Fallback para tipo 1 se desconhecido
+        this.sprite = spriteSheet.normal;
+        this.width = 50; this.height = 50; this.hp = 30; this.maxHp = 30; this.speed = 1.5;
+        this.shotCooldownTime = 120; this.projectileSpeed = 4; this.projectileDamage = 10; this.scoreValue = 100;
+    }
+    
+    this.currentShotCooldown = this.shotCooldownTime; // Começa com cooldown
+    this.damageOnCollision = 5; // Dano genérico em colisão direta
   }
 
   update(projectilesArray) {
-    // Movimento básico: seguir o jogador
+    // Movimento básico: seguir o jogador (comportamento pode ser diferenciado por tipo depois)
     if (this.playerReference) {
       let angle = atan2(this.playerReference.y - this.y, this.playerReference.x - this.x);
       this.x += cos(angle) * this.speed;
@@ -38,17 +74,17 @@ class Enemy {
 
   shoot(projectilesArray) {
     if (this.playerReference) {
-      // Cria um projétil mirando no jogador
-      let newProjectile = new Projectile(
+      let proj = new Projectile(
         this.x,
         this.y,
-        this.playerReference.x, // Alvo X
-        this.playerReference.y, // Alvo Y
+        this.playerReference.x,
+        this.playerReference.y,
         this.projectileSpeed,
-        'enemy_type_1', // owner
-        this.projectileSprite // sprite do projétil inimigo
+        `enemy_type_${this.type}`, // Owner dinâmico
+        this.projectileSprite
       );
-      projectilesArray.push(newProjectile);
+      proj.damage = this.projectileDamage; // Define o dano do projétil específico deste inimigo
+      projectilesArray.push(proj);
     }
   }
 

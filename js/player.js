@@ -8,9 +8,11 @@ class Player {
     this.speed = 4; // Velocidade de movimento
     this.hp = 100; // Pontos de vida
     this.maxHp = 100;
+    this.isShielded = false; // << NOVO: Para o power-up de escudo
     
     // Mecânica de tiro
-    this.shotCooldownTime = 30; // Cooldown em frames (ex: 30 frames = 0.5s a 60FPS)
+    this.originalShotCooldownTime = 30; // << NOVO: Guarda o cooldown original
+    this.shotCooldownTime = this.originalShotCooldownTime; 
     this.currentShotCooldown = 0;
     this.projectileSpeed = 8;
 
@@ -62,6 +64,15 @@ class Player {
   display() {
     if (this.sprite) {
       image(this.sprite, this.x, this.y, this.width, this.height); 
+      // Desenhar escudo visualmente se ativo
+      if (this.isShielded) {
+        push();
+        noFill();
+        stroke(0, 150, 255, 200); // Azul claro para o escudo
+        strokeWeight(3);
+        ellipse(this.x, this.y, this.width * 1.2, this.height * 1.2);
+        pop();
+      }
     } else {
       // Desenho fallback se não houver sprite
       fill(0, 200, 0); // Verde
@@ -72,6 +83,10 @@ class Player {
   }
   
   takeDamage(amount) {
+    if (this.isShielded) {
+      console.log("Jogador com escudo, dano absorvido!");
+      return false; // Não tomou dano
+    }
     this.hp -= amount;
     console.log("Player HP: " + this.hp);
     if (this.hp <= 0) {
@@ -82,6 +97,11 @@ class Player {
       return true; // Indica que o jogador foi derrotado
     }
     return false;
+  }
+
+  // Método para resetar shotCooldownTime para o valor original
+  resetShotCooldown() {
+    this.shotCooldownTime = this.originalShotCooldownTime;
   }
   // Outros métodos como heal, applyPowerUp serão adicionados depois
 } 

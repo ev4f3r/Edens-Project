@@ -5,7 +5,7 @@ class Projectile {
     this.speed = speed;
     this.owner = owner; // 'player' ou 'enemy_type_X'
     this.sprite = sprite; // p5.Image
-    this.size = this.sprite ? max(this.sprite.width, this.sprite.height) : 10; // Tamanho baseado no sprite ou padrão
+    this.size = 12; // Tamanho padronizado para 12x12 pixels
     this.damage = 10; // Dano padrão, pode ser ajustado
 
     // Calcular direção para o alvo

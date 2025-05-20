@@ -1,12 +1,14 @@
 // Variáveis globais para imagens
 let backgroundImg, playerImg, enemy1Img, enemy2Img, enemy3Img, projectilePlayerImg, projectileEnemyImg;
+let powerUpHealImg, powerUpShotSpeedImg, powerUpShieldImg; // << NOVO: Sprites para power-ups
 
 // Placeholder para objetos do jogo
 let player;
 let projectiles = [];
 let enemies = [];
-let score = 0; // << NOVO: Variável de pontuação
-// let powerups = [];
+let score = 0;
+let powerUps = []; // << NOVO: Array para power-ups no chão
+let activePlayerEffects = []; // << NOVO: Array para power-ups com duração ativos no jogador
 
 // Variáveis de controle do Joystick e Botão
 let joystickSize = 100;
@@ -21,7 +23,14 @@ let shootTargetPos = { x: 0, y: 0 }; // << NOVO: Para armazenar o alvo do tiro
 
 // Variáveis para controle de spawn de inimigos
 let enemySpawnInterval = 180; // Intervalo em frames (ex: 180 frames = 3s a 60FPS)
-let enemySpawnTimer = enemySpawnInterval; 
+let enemySpawnTimer = enemySpawnInterval;
+let enemySpriteSheet = {};
+
+// Variáveis para controle de spawn de power-ups
+let powerUpSpawnInterval = 600; // Intervalo em frames (ex: 600 frames = 10s a 60FPS)
+let powerUpSpawnTimer = powerUpSpawnInterval;
+let powerUpTypes = ['heal', 'shot_speed', 'shield'];
+let powerUpSprites = {}; // << NOVO: Para agrupar sprites de power-ups
 
 function preload() {
   console.log("Iniciando preload()...");
@@ -37,6 +46,17 @@ function preload() {
   // Considere criar um placeholder 10x10px branco/vermelho chamado projectile_player.png em assets/images/
   projectilePlayerImg = loadImage('assets/images/projectile_player.png', () => console.log("projectile_player.png carregado"), (e) => console.error("Erro carregando projectile_player.png. Crie um placeholder se necessário.", e));
   projectileEnemyImg = loadImage('assets/images/projectile_enemy.png', () => console.log("projectile_enemy.png carregado"), (e) => console.error("Erro carregando projectile_enemy.png. Crie um placeholder se necessário.", e));
+
+  // Carrega sprites dos power-ups
+  powerUpHealImg = loadImage('assets/images/powerup_heal.png', () => { console.log("powerup_heal.png carregado"); powerUpSprites.heal = powerUpHealImg; }, (e) => console.error("Erro carregando powerup_heal.png.", e));
+  powerUpShotSpeedImg = loadImage('assets/images/powerup_shot_speed.png', () => { console.log("powerup_shot_speed.png carregado"); powerUpSprites.shot_speed = powerUpShotSpeedImg; }, (e) => console.error("Erro carregando powerup_shot_speed.png.", e));
+  powerUpShieldImg = loadImage('assets/images/powerup_shield.png', () => { console.log("powerup_shield.png carregado"); powerUpSprites.shield = powerUpShieldImg; }, (e) => console.error("Erro carregando powerup_shield.png.", e));
+  
+  // Preenche o enemySpriteSheet após carregar as imagens
+  if (enemy1Img) enemySpriteSheet.normal = enemy1Img;
+  if (enemy2Img) enemySpriteSheet.fast = enemy2Img;
+  if (enemy3Img) enemySpriteSheet.strong = enemy3Img; // << NOVO: Adiciona sprite do inimigo forte
+
   console.log("preload() finalizado.");
 }
 
@@ -106,6 +126,13 @@ function draw() {
     enemySpawnTimer = enemySpawnInterval;
   }
 
+  // Lógica de spawn de power-ups
+  powerUpSpawnTimer--;
+  if (powerUpSpawnTimer <= 0) {
+    spawnPowerUp();
+    powerUpSpawnTimer = powerUpSpawnInterval;
+  }
+
   // Atualiza jogador
   if (player) {
     let moveVector = { x: 0, y: 0 };
@@ -172,6 +199,28 @@ function draw() {
     enemies[i].update(projectiles); // Passa o array de projéteis para o update do inimigo
     enemies[i].display();
     // Lógica de remoção de inimigos (ex: se saírem da tela ou HP <= 0) virá aqui
+  }
+
+  // Atualiza e exibe power-ups no chão
+  for (let i = powerUps.length - 1; i >= 0; i--) {
+    powerUps[i].display();
+    if (player && powerUps[i].collidesWith(player)) {
+      powerUps[i].applyEffect(player);
+      if (powerUps[i].duration > 0) { // Se tem duração, move para efeitos ativos
+        activePlayerEffects.push(powerUps[i]);
+      }
+      powerUps.splice(i, 1); // Remove do chão
+    }
+  }
+
+  // Atualiza efeitos ativos no jogador
+  for (let i = activePlayerEffects.length - 1; i >= 0; i--) {
+    activePlayerEffects[i].update(player);
+    if (activePlayerEffects[i].duration <= 0 && !activePlayerEffects[i].collected) { // 'collected' aqui é um pouco redundante, mas garante que não processe de novo se o status mudar
+        // O powerup já deve ter revertido o efeito no seu próprio update.
+        // Apenas removemos da lista de efeitos ativos.
+        activePlayerEffects.splice(i,1);
+    }
   }
 
   // Desenha UI (Joystick e Botão de Tiro)
@@ -289,34 +338,58 @@ function windowResized() {
 }
 
 function spawnEnemy() {
-  if (!enemy1Img || !player || !projectileEnemyImg) {
-    console.warn("Não é possível spawnar inimigo: assets ou jogador não carregados.");
+  if (!player || !projectileEnemyImg || Object.keys(enemySpriteSheet).length < 3) { // Verifica se todos os 3 tipos de sprites estão carregados
+    console.warn("Não é possível spawnar inimigo: assets (sprites de inimigo, projétil) ou jogador não carregados ou sprite sheet incompleta.");
     return;
   }
 
-  let edge = floor(random(4)); // 0: topo, 1: direita, 2: baixo, 3: esquerda
+  let enemyTypeToSpawn;
+  let rand = random();
+  if (rand < 0.4) { // 40% chance
+    enemyTypeToSpawn = 1;
+  } else if (rand < 0.7) { // 30% chance (0.4 + 0.3 = 0.7)
+    enemyTypeToSpawn = 2;
+  } else { // 30% chance
+    enemyTypeToSpawn = 3;
+  }
+  
+  // let selectedSprite; // Não é mais necessário aqui, o construtor do Enemy lida com isso
+
+  switch (enemyTypeToSpawn) {
+    case 1:
+      if (!enemySpriteSheet.normal) {
+        console.warn("Sprite para inimigo normal (tipo 1) não carregado.");
+        return;
+      }
+      break;
+    case 2:
+      if (!enemySpriteSheet.fast) {
+        console.warn("Sprite para inimigo rápido (tipo 2) não carregado.");
+        return;
+      }
+      break;
+    case 3:
+      if (!enemySpriteSheet.strong) {
+        console.warn("Sprite para inimigo forte (tipo 3) não carregado.");
+        return;
+      }
+      break;
+    default:
+      console.warn("Tentativa de spawnar tipo de inimigo desconhecido via spawnEnemy.");
+      return;
+  }
+
+  let edge = floor(random(4));
   let x, y;
-  let buffer = 50; // Para spawnar um pouco fora da tela visível
+  let buffer = 70; // Aumentar um pouco o buffer para inimigos maiores como o Tipo 3
 
   switch (edge) {
-    case 0: // Topo
-      x = random(width);
-      y = -buffer;
-      break;
-    case 1: // Direita
-      x = width + buffer;
-      y = random(height);
-      break;
-    case 2: // Baixo
-      x = random(width);
-      y = height + buffer;
-      break;
-    case 3: // Esquerda
-      x = -buffer;
-      y = random(height);
-      break;
+    case 0: x = random(width); y = -buffer; break;
+    case 1: x = width + buffer; y = random(height); break;
+    case 2: x = random(width); y = height + buffer; break;
+    case 3: x = -buffer; y = random(height); break;
   }
-  enemies.push(new Enemy(x, y, player, enemy1Img, projectileEnemyImg));
+  enemies.push(new Enemy(x, y, enemyTypeToSpawn, player, enemySpriteSheet, projectileEnemyImg));
 }
 
 function drawHUD() {
@@ -344,6 +417,26 @@ function drawHUD() {
     rect(20, 80, barWidth, barHeight); // Borda da barra
   }
   pop(); // Restaura o estilo anterior
+}
+
+function spawnPowerUp() {
+  if (Object.keys(powerUpSprites).length < powerUpTypes.length) {
+    console.warn("Não é possível spawnar power-up: nem todos os sprites de power-up foram carregados.");
+    return;
+  }
+  let typeIndex = floor(random(powerUpTypes.length));
+  let type = powerUpTypes[typeIndex];
+  let sprite = powerUpSprites[type];
+
+  if (!sprite) {
+      console.warn(`Sprite para power-up tipo ${type} não encontrado.`);
+      return;
+  }
+
+  let x = random(width * 0.1, width * 0.9); // Spawn em área central
+  let y = random(height * 0.1, height * 0.9);
+  powerUps.push(new PowerUp(x, y, type, sprite));
+  console.log(`Spawnou power-up: ${type} em (${x.toFixed(0)}, ${y.toFixed(0)})`);
 }
 
 // Adicione as classes Player e Projectile em seus respectivos arquivos (js/player.js, js/projectile.js)
