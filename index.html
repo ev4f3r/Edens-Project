@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Apocalypse AI Shooter</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Biblioteca p5.js - pode ser CDN ou local -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+  <!-- Opcional: p5.sound para áudio no futuro -->
+  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/addons/p5.sound.min.js"></script> -->
+
+  <!-- Scripts do Jogo -->
+  <script src="sketch.js" defer></script>
+  <script src="js/player.js" defer></script>
+  <script src="js/projectile.js" defer></script>
+  <!-- Outros scripts de classes (enemy, powerup, etc.) serão adicionados aqui depois -->
+  <!-- <script src="js/enemy.js" defer></script> -->
+  <!-- <script src="js/powerup.js" defer></script> -->
+  <!-- <script src="js/joystick.js" defer></script> -->
+  <!-- <script src="js/ui.js" defer></script> -->
+  <!-- <script src="js/collision.js" defer></script> -->
+  <!-- <script src="js/spawner.js" defer></script> -->
+  <!-- <script src="js/gameManager.js" defer></script> -->
+
+</head>
+<body>
+  <main>
+    <!-- O canvas do p5.js será inserido aqui pelo sketch.js -->
+  </main>
+  <!-- Overlay para Game Over (inicialmente escondido) -->
+  <div id="gameOverOverlay" style="display:none;">
+    <h1>GAME OVER</h1>
+    <p>Sua Pontuação: <span id="finalScore">0</span></p>
+    <button id="restartButton">JOGAR NOVAMENTE</button>
+  </div>
+</body>
+</html> 

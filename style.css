@@ -1,0 +1,65 @@
+body, html {
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* Evita barras de rolagem se o canvas preencher a tela */
+  background-color: #111; /* Cor de fundo escura */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100vw;
+  height: 100vh;
+  font-family: 'Arial', sans-serif; /* Fonte padrão */
+}
+
+main {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+canvas {
+  display: block; /* Remove espaço extra abaixo do canvas */
+  border: 1px solid #fff; /* Apenas para visualização inicial, pode ser removido */
+}
+
+/* Estilos para o Overlay de Game Over */
+#gameOverOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.75);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  z-index: 1000;
+}
+
+#gameOverOverlay h1 {
+  font-size: 3em;
+  margin-bottom: 20px;
+}
+
+#gameOverOverlay p {
+  font-size: 1.5em;
+  margin-bottom: 30px;
+}
+
+#gameOverOverlay button {
+  padding: 10px 20px;
+  font-size: 1.2em;
+  background-color: #eee;
+  color: #333;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+#gameOverOverlay button:hover {
+  background-color: #ccc;
+} 
