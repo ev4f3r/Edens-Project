@@ -85,15 +85,14 @@ class Player {
   takeDamage(amount) {
     if (this.isShielded) {
       console.log("Jogador com escudo, dano absorvido!");
-      return false; // Não tomou dano
+      return false; 
     }
     this.hp -= amount;
     console.log("Player HP: " + this.hp);
     if (this.hp <= 0) {
       this.hp = 0;
+      // currentGameState = GameState.GAME_OVER; // Esta linha será movida para sketch.js
       console.log("GAME OVER - Player derrotado");
-      // Aqui, futuramente, vamos mudar o estado do jogo para GAME_OVER
-      // noLoop(); // Pausa o jogo, por exemplo
       return true; // Indica que o jogador foi derrotado
     }
     return false;

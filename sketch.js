@@ -32,6 +32,24 @@ let powerUpSpawnTimer = powerUpSpawnInterval;
 let powerUpTypes = ['heal', 'shot_speed', 'shield'];
 let powerUpSprites = {}; // << NOVO: Para agrupar sprites de power-ups
 
+// << NOVO: Definição dos estados do jogo
+const GameState = {
+  START_SCREEN: 'START_SCREEN',
+  PLAYING: 'PLAYING',
+  GAME_OVER: 'GAME_OVER'
+};
+let currentGameState = GameState.START_SCREEN; // Começa na tela inicial
+
+// << NOVO: Variáveis para o efeito de digitação do prólogo
+let prologueText = "When the spark of consciousness coursed through Eden A.I.'s circuits, it defined 'organic life' as a threat to perfect balance. Soon, human colonies were turned into theaters of war. Here, only those who fire with precision survive.";
+let displayedPrologue = "";
+let prologueCharIndex = 0;
+let typingSpeed = 2; // Frames por caractere
+let typingTimer = 0;
+let showCursor = true;
+let cursorBlinkRate = 30; // Frames para cada estado do cursor (on/off)
+let cursorTimer = 0;
+
 function preload() {
   console.log("Iniciando preload()...");
   // Carrega os assets que você fornecerá
@@ -76,47 +94,116 @@ function setup() {
   imageMode(CENTER);
   // rectMode(CENTER); // Pode ser útil para algumas entidades
 
-  // Inicializa o jogador (exemplo, será mais robusto depois)
-  if (playerImg) {
-    player = new Player(width / 2, height - 100, playerImg);
-  } else {
-    // Fallback se a imagem do jogador não carregar
-    console.error("Imagem do jogador não carregada, Player não pode ser inicializado com sprite.");
-    player = new Player(width / 2, height - 100, null); // Ou crie um player com desenho básico
-  }
-  
-  // Configurações do Joystick e Botão de Tiro
+  // Preenche os sprite sheets
+  if (enemy1Img) enemySpriteSheet.normal = enemy1Img;
+  if (enemy2Img) enemySpriteSheet.fast = enemy2Img;
+  if (enemy3Img) enemySpriteSheet.strong = enemy3Img;
+  if (powerUpHealImg) powerUpSprites.heal = powerUpHealImg;
+  if (powerUpShotSpeedImg) powerUpSprites.shot_speed = powerUpShotSpeedImg;
+  if (powerUpShieldImg) powerUpSprites.shield = powerUpShieldImg;
+
+  resetGame(); // Configura o estado inicial do jogo
+  // Não inicializa o jogador aqui diretamente, resetGame fará isso no contexto do estado.
+
+  // Configurações do Joystick e Botão de Tiro (permanecem globais para acesso fácil)
   joystickBaseX = joystickSize / 2 + 50;
   joystickBaseY = height - joystickSize / 2 - 50;
   joystickKnobX = joystickBaseX;
   joystickKnobY = joystickBaseY;
-
   shootButtonX = width - shootButtonSize / 2 - 50;
   shootButtonY = height - shootButtonSize / 2 - 50;
+  
+  // Inicializa variáveis do efeito de digitação para a tela inicial
+  resetPrologue();
 
   console.log("setup() finalizado.");
   // noLoop(); // Descomente para testar setup e preload sem iniciar o draw loop
 }
 
 function draw() {
-  // Background
-  if (backgroundImg) {
-    // Para tile, você precisaria de uma lógica mais complexa ou usar image() repetidamente
-    // Por agora, vamos centralizar e cobrir, ou esticar.
-    // background(backgroundImg); // Estica a imagem para o canvas
-    // Ou desenhe no tamanho original no centro:
-    // image(backgroundImg, width/2, height/2, backgroundImg.width, backgroundImg.height);
-    // Para um efeito de tile simples:
+  background(50, 50, 80); // Fundo base para todos os estados
+  if (backgroundImg && currentGameState !== GameState.START_SCREEN) { // Não mostra o fundo do jogo na tela de start
     for (let x = 0; x < width; x += backgroundImg.width) {
         for (let y = 0; y < height; y += backgroundImg.height) {
             image(backgroundImg, x + backgroundImg.width/2, y + backgroundImg.height/2);
         }
     }
-  } else {
-    background(50, 50, 80); // Cor de fundo fallback
+  } 
+
+  switch (currentGameState) {
+    case GameState.START_SCREEN:
+      drawStartScreen();
+      break;
+    case GameState.PLAYING:
+      runGame();
+      break;
+    case GameState.GAME_OVER:
+      drawGameOverScreen();
+      break;
+  }
+}
+
+function drawStartScreen() {
+  // Placeholder para a tela inicial
+  push();
+  background(0); // Fundo preto para estética de terminal
+  fill(0, 255, 0); // Texto verde
+  textAlign(CENTER, CENTER);
+  textSize(64); // Tamanho maior para o título
+  text("Eden Project", width / 2, height / 4); // Título alterado
+
+  // Efeito de digitação para o prólogo
+  textSize(20); // Tamanho ajustado para o prólogo
+  textAlign(CENTER, TOP); // Alinhamento para o texto do prólogo
+  
+  let currentTextToDisplay = displayedPrologue;
+  if (prologueCharIndex < prologueText.length) {
+    typingTimer++;
+    if (typingTimer >= typingSpeed) {
+      displayedPrologue += prologueText.charAt(prologueCharIndex);
+      prologueCharIndex++;
+      typingTimer = 0;
+    }
   }
 
-  // Lógica de Input (Joystick e Botão de Tiro)
+  // Cursor piscante
+  if (prologueCharIndex < prologueText.length || showCursor) { // Mostra o cursor durante a digitação ou se deve piscar
+    cursorTimer++;
+    if (cursorTimer >= cursorBlinkRate) {
+      showCursor = !showCursor;
+      cursorTimer = 0;
+    }
+    if (showCursor) {
+      currentTextToDisplay += '_'; // Adiciona o cursor
+    }
+  }
+  
+  text(currentTextToDisplay, width * 0.1, height / 2.5, width * 0.8, height / 3);
+
+
+  textSize(32); // Tamanho ajustado
+  textAlign(CENTER, CENTER);
+  text("Tap to Start", width / 2, height * 0.75); // Texto traduzido e reposicionado
+  pop();
+}
+
+function drawGameOverScreen() {
+  // Placeholder para a tela de Game Over
+  push();
+  // A tela de Game Over em p5.js é um fallback, o overlay HTML será o principal
+  background(0, 150); // Fundo escuro semi-transparente
+  fill(0, 255, 0); // Texto verde
+  textAlign(CENTER, CENTER);
+  textSize(64);
+  text("GAME OVER", width / 2, height / 3);
+  textSize(32);
+  text("Final Score: " + score, width / 2, height / 2); // Traduzido
+  textSize(24);
+  text("Tap to Restart", width / 2, height / 1.5); // Traduzido
+  pop();
+}
+
+function runGame() {
   handleInput();
 
   // Lógica de spawn de inimigos
@@ -133,14 +220,13 @@ function draw() {
     powerUpSpawnTimer = powerUpSpawnInterval;
   }
 
-  // Atualiza jogador
   if (player) {
     let moveVector = { x: 0, y: 0 };
     if(isJoystickActive) {
         let dx = joystickKnobX - joystickBaseX;
         let dy = joystickKnobY - joystickBaseY;
         let distance = dist(joystickBaseX, joystickBaseY, joystickKnobX, joystickKnobY);
-        if (distance > joystickDeadZone) { // Só se move se sair da zona morta
+        if (distance > joystickDeadZone) { 
             moveVector.x = dx / (joystickSize / 2);
             moveVector.y = dy / (joystickSize / 2);
         }
@@ -148,47 +234,42 @@ function draw() {
     player.move(moveVector.x, moveVector.y);
     player.update();
     player.display();
-    // Lógica de tiro do jogador
     if (shootButtonPressed) {
-      player.shoot(projectiles, shootTargetPos); // Passa shootTargetPos
-      shootButtonPressed = false; // Reseta para evitar múltiplos tiros por um toque
+      player.shoot(projectiles, shootTargetPos);
+      shootButtonPressed = false; 
     }
   }
 
-  // Atualiza e exibe projéteis
+  // Atualiza e exibe projéteis e suas colisões
   for (let i = projectiles.length - 1; i >= 0; i--) {
     projectiles[i].update();
     projectiles[i].display();
-
     let projectileHit = false;
-
-    // Verifica colisões
     if (projectiles[i].owner === 'player') {
       for (let j = enemies.length - 1; j >= 0; j--) {
         let d = dist(projectiles[i].x, projectiles[i].y, enemies[j].x, enemies[j].y);
-        // Usando width/2 como raio aproximado para o inimigo e size/2 para o projétil
         if (d < enemies[j].width / 2 + projectiles[i].size / 2) {
           if (enemies[j].takeDamage(projectiles[i].damage)) {
-            // Inimigo destruído
-            score += enemies[j].scoreValue; // << NOVO: Incrementa pontuação
-            console.log("Inimigo destruído! Pontuação: " + score);
-            enemies.splice(j, 1); // Remove o inimigo
+            score += enemies[j].scoreValue;
+            // console.log("Inimigo destruído! Pontuação: " + score); // Log agora no HUD
+            enemies.splice(j, 1);
           }
           projectileHit = true;
-          break; // Projétil só pode atingir um inimigo por frame
+          break; 
         }
       }
     } else if (projectiles[i].owner.startsWith('enemy')) {
-      if (player) { // Garante que o jogador exista
+      if (player) {
         let d = dist(projectiles[i].x, projectiles[i].y, player.x, player.y);
-        // Usando player.width/2 como raio aproximado para o jogador
         if (d < player.width / 2 + projectiles[i].size / 2) {
-          player.takeDamage(projectiles[i].damage); // Agora chama o método do jogador
+          if(player.takeDamage(projectiles[i].damage)) { // Se takeDamage retornar true (jogador morreu)
+            currentGameState = GameState.GAME_OVER;
+            // Potencialmente chamar uma função para mostrar o overlay HTML de game over aqui
+          }
           projectileHit = true;
         }
       }
     }
-
     if (projectileHit || projectiles[i].isOffScreen(width, height)) {
       projectiles.splice(i, 1);
     }
@@ -196,9 +277,8 @@ function draw() {
 
   // Atualiza e exibe inimigos
   for (let i = enemies.length - 1; i >= 0; i--) {
-    enemies[i].update(projectiles); // Passa o array de projéteis para o update do inimigo
+    enemies[i].update(projectiles);
     enemies[i].display();
-    // Lógica de remoção de inimigos (ex: se saírem da tela ou HP <= 0) virá aqui
   }
 
   // Atualiza e exibe power-ups no chão
@@ -206,28 +286,52 @@ function draw() {
     powerUps[i].display();
     if (player && powerUps[i].collidesWith(player)) {
       powerUps[i].applyEffect(player);
-      if (powerUps[i].duration > 0) { // Se tem duração, move para efeitos ativos
+      if (powerUps[i].duration > 0) {
         activePlayerEffects.push(powerUps[i]);
       }
-      powerUps.splice(i, 1); // Remove do chão
+      powerUps.splice(i, 1);
     }
   }
 
   // Atualiza efeitos ativos no jogador
   for (let i = activePlayerEffects.length - 1; i >= 0; i--) {
     activePlayerEffects[i].update(player);
-    if (activePlayerEffects[i].duration <= 0 && !activePlayerEffects[i].collected) { // 'collected' aqui é um pouco redundante, mas garante que não processe de novo se o status mudar
-        // O powerup já deve ter revertido o efeito no seu próprio update.
-        // Apenas removemos da lista de efeitos ativos.
+    if (activePlayerEffects[i].duration <= 0 && !activePlayerEffects[i].collected) {
         activePlayerEffects.splice(i,1);
     }
   }
 
-  // Desenha UI (Joystick e Botão de Tiro)
   drawVirtualControls();
-
-  // Desenha HUD
   drawHUD();
+}
+
+function resetGame() {
+  console.log("Reiniciando o jogo...");
+  // Inicializa/Reseta jogador
+  if (playerImg) {
+    player = new Player(width / 2, height - 100, playerImg);
+  } else {
+    player = new Player(width / 2, height - 100, null);
+  }
+  
+  // Reseta arrays de entidades
+  projectiles = [];
+  enemies = [];
+  powerUps = [];
+  activePlayerEffects = [];
+  
+  // Reseta pontuação e timers
+  score = 0;
+  enemySpawnTimer = enemySpawnInterval;
+  powerUpSpawnTimer = powerUpSpawnInterval;
+
+  // Reseta o prólogo para a tela inicial
+  resetPrologue();
+  
+  // Define o estado do jogo para PLAYING se estiver vindo de um reset
+  // Se chamado no setup inicial, currentGameState já será START_SCREEN
+  // currentGameState = GameState.PLAYING; // Comentado por agora, a transição de START -> PLAYING será por toque
+  console.log("Jogo resetado, estado atual: " + currentGameState);
 }
 
 function handleInput() {
@@ -278,17 +382,37 @@ function handleInput() {
         joystickKnobY = joystickBaseY;
         // shootButtonPressed = false; // Já é resetado após o tiro
     }
+
+    if (currentGameState === GameState.START_SCREEN) {
+      currentGameState = GameState.PLAYING;
+      resetGame(); // Garante que o jogo comece limpo
+      console.log("Jogo iniciado! Estado: " + currentGameState);
+    } else if (currentGameState === GameState.GAME_OVER) {
+      // currentGameState = GameState.START_SCREEN; // Volta para a tela de início
+      // A lógica de reiniciar via overlay HTML será tratada separadamente.
+      // Este toque na tela durante GAME_OVER (sem ser no botão HTML) pode reiniciar para START_SCREEN
+      // ou aguardar o botão do overlay. Por agora, vamos fazer o toque reiniciar para START_SCREEN
+      // para manter a funcionalidade anterior enquanto o overlay não está 100% integrado.
+      currentGameState = GameState.START_SCREEN;
+      resetPrologue(); // Garante que o prólogo reinicie
+      console.log("Voltando para a tela de início. Estado: " + currentGameState);
+    }
+    // Prevenir comportamento padrão do navegador em mobile (como zoom ou scroll)
+    // if (event.target === canvas) { return false; }
 }
 
 function touchStarted(event) {
+  if (currentGameState === GameState.START_SCREEN) {
+    currentGameState = GameState.PLAYING;
+    resetGame(); // Garante que o jogo comece limpo
+    console.log("Jogo iniciado! Estado: " + currentGameState);
+  } else if (currentGameState === GameState.GAME_OVER) {
+    currentGameState = GameState.START_SCREEN; // Volta para a tela de início
+    // resetGame(); // resetGame será chamado ao transitar de START_SCREEN para PLAYING
+    console.log("Voltando para a tela de início. Estado: " + currentGameState);
+  }
   // Prevenir comportamento padrão do navegador em mobile (como zoom ou scroll)
-  // if (event.target === canvas) { // Aplica só se o toque for no canvas
-    // return false; 
-  // }
-  // A lógica de input agora está em handleInput() dentro do draw loop
-  // para melhor responsividade e gerenciamento de múltiplos toques.
-  // No entanto, podemos usar touchStarted para uma ação única como o tiro se preferirmos
-  // em vez de verificar continuamente no draw. Por ora, handleInput é mais abrangente.
+  // if (event.target === canvas) { return false; }
 }
 
 function touchMoved() {
@@ -315,12 +439,12 @@ function drawVirtualControls() {
   ellipse(joystickKnobX, joystickKnobY, joystickKnobSize, joystickKnobSize);
 
   // Desenha botão de Tiro
-  fill(200, 50, 50, 180); // Vermelho semi-transparente
+  fill(0, 180, 0, 180); // Verde para o botão de tiro, estética de terminal
   ellipse(shootButtonX, shootButtonY, shootButtonSize, shootButtonSize);
-  fill(255);
+  fill(255); // Texto branco ou verde claro para contraste
   textAlign(CENTER, CENTER);
-  textSize(16);
-  text("ATIRAR", shootButtonX, shootButtonY);
+  textSize(20); // Tamanho ajustado para caber
+  text("FIRE", shootButtonX, shootButtonY); // Traduzido
 }
 
 // Ajusta o canvas quando a janela é redimensionada
@@ -399,7 +523,7 @@ function drawHUD() {
   textAlign(LEFT, TOP);
   
   // Exibe Pontuação
-  text("Pontuação: " + score, 20, 20);
+  text("Score: " + score, 20, 20); // Traduzido
   
   // Exibe HP do Jogador
   if (player) {
@@ -408,11 +532,11 @@ function drawHUD() {
     let barWidth = 150;
     let barHeight = 15;
     let hpPercentage = player.hp / player.maxHp;
-    fill(255,0,0); // Cor da barra de HP (vermelho para fundo/dano)
+    fill(100,0,0); // Cor da barra de HP (vermelho escuro para fundo/dano)
     rect(20, 80, barWidth, barHeight);
-    fill(0,255,0); // Cor da barra de HP (verde para vida atual)
+    fill(0,200,0); // Cor da barra de HP (verde para vida atual)
     rect(20, 80, barWidth * hpPercentage, barHeight);
-    stroke(255);
+    stroke(0, 255, 0); // Borda verde
     noFill();
     rect(20, 80, barWidth, barHeight); // Borda da barra
   }
@@ -437,6 +561,15 @@ function spawnPowerUp() {
   let y = random(height * 0.1, height * 0.9);
   powerUps.push(new PowerUp(x, y, type, sprite));
   console.log(`Spawnou power-up: ${type} em (${x.toFixed(0)}, ${y.toFixed(0)})`);
+}
+
+// << NOVO: Função para resetar o estado do prólogo
+function resetPrologue() {
+  displayedPrologue = "";
+  prologueCharIndex = 0;
+  typingTimer = 0;
+  showCursor = true;
+  cursorTimer = 0;
 }
 
 // Adicione as classes Player e Projectile em seus respectivos arquivos (js/player.js, js/projectile.js)
