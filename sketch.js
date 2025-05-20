@@ -1,10 +1,11 @@
 // Variáveis globais para imagens
-let backgroundImg, playerImg, enemy1Img, enemy2Img, enemy3Img, projectilePlayerImg; // Adicione outras conforme necessário
+let backgroundImg, playerImg, enemy1Img, enemy2Img, enemy3Img, projectilePlayerImg, projectileEnemyImg;
 
 // Placeholder para objetos do jogo
 let player;
 let projectiles = [];
-// let enemies = [];
+let enemies = [];
+let score = 0; // << NOVO: Variável de pontuação
 // let powerups = [];
 
 // Variáveis de controle do Joystick e Botão
@@ -17,6 +18,10 @@ let isJoystickActive = false;
 let shootButtonX, shootButtonY, shootButtonSize = 80;
 let shootButtonPressed = false;
 let shootTargetPos = { x: 0, y: 0 }; // << NOVO: Para armazenar o alvo do tiro
+
+// Variáveis para controle de spawn de inimigos
+let enemySpawnInterval = 180; // Intervalo em frames (ex: 180 frames = 3s a 60FPS)
+let enemySpawnTimer = enemySpawnInterval; 
 
 function preload() {
   console.log("Iniciando preload()...");
@@ -31,6 +36,7 @@ function preload() {
   // Se você não tiver projectile_player.png, o jogo pode não iniciar corretamente ou mostrar erros.
   // Considere criar um placeholder 10x10px branco/vermelho chamado projectile_player.png em assets/images/
   projectilePlayerImg = loadImage('assets/images/projectile_player.png', () => console.log("projectile_player.png carregado"), (e) => console.error("Erro carregando projectile_player.png. Crie um placeholder se necessário.", e));
+  projectileEnemyImg = loadImage('assets/images/projectile_enemy.png', () => console.log("projectile_enemy.png carregado"), (e) => console.error("Erro carregando projectile_enemy.png. Crie um placeholder se necessário.", e));
   console.log("preload() finalizado.");
 }
 
@@ -93,6 +99,13 @@ function draw() {
   // Lógica de Input (Joystick e Botão de Tiro)
   handleInput();
 
+  // Lógica de spawn de inimigos
+  enemySpawnTimer--;
+  if (enemySpawnTimer <= 0) {
+    spawnEnemy();
+    enemySpawnTimer = enemySpawnInterval;
+  }
+
   // Atualiza jogador
   if (player) {
     let moveVector = { x: 0, y: 0 };
@@ -119,13 +132,53 @@ function draw() {
   for (let i = projectiles.length - 1; i >= 0; i--) {
     projectiles[i].update();
     projectiles[i].display();
-    if (projectiles[i].isOffScreen(width, height)) {
+
+    let projectileHit = false;
+
+    // Verifica colisões
+    if (projectiles[i].owner === 'player') {
+      for (let j = enemies.length - 1; j >= 0; j--) {
+        let d = dist(projectiles[i].x, projectiles[i].y, enemies[j].x, enemies[j].y);
+        // Usando width/2 como raio aproximado para o inimigo e size/2 para o projétil
+        if (d < enemies[j].width / 2 + projectiles[i].size / 2) {
+          if (enemies[j].takeDamage(projectiles[i].damage)) {
+            // Inimigo destruído
+            score += enemies[j].scoreValue; // << NOVO: Incrementa pontuação
+            console.log("Inimigo destruído! Pontuação: " + score);
+            enemies.splice(j, 1); // Remove o inimigo
+          }
+          projectileHit = true;
+          break; // Projétil só pode atingir um inimigo por frame
+        }
+      }
+    } else if (projectiles[i].owner.startsWith('enemy')) {
+      if (player) { // Garante que o jogador exista
+        let d = dist(projectiles[i].x, projectiles[i].y, player.x, player.y);
+        // Usando player.width/2 como raio aproximado para o jogador
+        if (d < player.width / 2 + projectiles[i].size / 2) {
+          player.takeDamage(projectiles[i].damage); // Agora chama o método do jogador
+          projectileHit = true;
+        }
+      }
+    }
+
+    if (projectileHit || projectiles[i].isOffScreen(width, height)) {
       projectiles.splice(i, 1);
     }
   }
 
+  // Atualiza e exibe inimigos
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    enemies[i].update(projectiles); // Passa o array de projéteis para o update do inimigo
+    enemies[i].display();
+    // Lógica de remoção de inimigos (ex: se saírem da tela ou HP <= 0) virá aqui
+  }
+
   // Desenha UI (Joystick e Botão de Tiro)
   drawVirtualControls();
+
+  // Desenha HUD
+  drawHUD();
 }
 
 function handleInput() {
@@ -233,6 +286,64 @@ function windowResized() {
   }
   shootButtonX = width - shootButtonSize / 2 - 50;
   shootButtonY = height - shootButtonSize / 2 - 50;
+}
+
+function spawnEnemy() {
+  if (!enemy1Img || !player || !projectileEnemyImg) {
+    console.warn("Não é possível spawnar inimigo: assets ou jogador não carregados.");
+    return;
+  }
+
+  let edge = floor(random(4)); // 0: topo, 1: direita, 2: baixo, 3: esquerda
+  let x, y;
+  let buffer = 50; // Para spawnar um pouco fora da tela visível
+
+  switch (edge) {
+    case 0: // Topo
+      x = random(width);
+      y = -buffer;
+      break;
+    case 1: // Direita
+      x = width + buffer;
+      y = random(height);
+      break;
+    case 2: // Baixo
+      x = random(width);
+      y = height + buffer;
+      break;
+    case 3: // Esquerda
+      x = -buffer;
+      y = random(height);
+      break;
+  }
+  enemies.push(new Enemy(x, y, player, enemy1Img, projectileEnemyImg));
+}
+
+function drawHUD() {
+  push(); // Isola o estilo do HUD
+  fill(255); // Cor do texto (branco)
+  textSize(24);
+  textAlign(LEFT, TOP);
+  
+  // Exibe Pontuação
+  text("Pontuação: " + score, 20, 20);
+  
+  // Exibe HP do Jogador
+  if (player) {
+    text("HP: " + player.hp + "/" + player.maxHp, 20, 50);
+    // Opcional: Barra de HP simples
+    let barWidth = 150;
+    let barHeight = 15;
+    let hpPercentage = player.hp / player.maxHp;
+    fill(255,0,0); // Cor da barra de HP (vermelho para fundo/dano)
+    rect(20, 80, barWidth, barHeight);
+    fill(0,255,0); // Cor da barra de HP (verde para vida atual)
+    rect(20, 80, barWidth * hpPercentage, barHeight);
+    stroke(255);
+    noFill();
+    rect(20, 80, barWidth, barHeight); // Borda da barra
+  }
+  pop(); // Restaura o estilo anterior
 }
 
 // Adicione as classes Player e Projectile em seus respectivos arquivos (js/player.js, js/projectile.js)

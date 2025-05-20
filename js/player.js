@@ -71,5 +71,17 @@ class Player {
     // (Opcional) Desenhar barra de HP sobre o jogador ou no HUD
   }
   
-  // Outros métodos como takeDamage, heal, applyPowerUp serão adicionados depois
+  takeDamage(amount) {
+    this.hp -= amount;
+    console.log("Player HP: " + this.hp);
+    if (this.hp <= 0) {
+      this.hp = 0;
+      console.log("GAME OVER - Player derrotado");
+      // Aqui, futuramente, vamos mudar o estado do jogo para GAME_OVER
+      // noLoop(); // Pausa o jogo, por exemplo
+      return true; // Indica que o jogador foi derrotado
+    }
+    return false;
+  }
+  // Outros métodos como heal, applyPowerUp serão adicionados depois
 } 
